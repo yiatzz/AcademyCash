@@ -1,93 +1,88 @@
 package br.com.yiatzz.cash;
 
-import br.com.yiatzz.cash.commands.CashCommand;
-import br.com.yiatzz.cash.commands.subcommands.AddCashCommand;
-import br.com.yiatzz.cash.commands.subcommands.DefineCashCommand;
-import br.com.yiatzz.cash.config.Settings;
+import br.com.yiatzz.cash.commands.CashAddCommand;
+import br.com.yiatzz.cash.commands.CashSeeCommand;
+import br.com.yiatzz.cash.config.GeneralConfig;
+import br.com.yiatzz.cash.config.LangConfig;
 import br.com.yiatzz.cash.listeners.PlayerQuitListener;
 import br.com.yiatzz.cash.storage.CashDatabase;
-import com.google.common.util.concurrent.UncheckedExecutionException;
 import com.google.inject.Inject;
-import com.google.inject.Injector;
 import org.slf4j.Logger;
 import org.spongepowered.api.Sponge;
-import org.spongepowered.api.command.CommandManager;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
-import org.spongepowered.api.event.EventManager;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
-import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingServerEvent;
 import org.spongepowered.api.plugin.Plugin;
-import org.spongepowered.api.plugin.PluginManager;
-import org.spongepowered.api.scheduler.Task;
+import org.spongepowered.api.text.Text;
 
-import java.io.IOException;
 import java.sql.SQLException;
 
 @Plugin(id = "cashplugin", name = "AcademyCash", version = "0.1", description = "Plugin de Cash")
 public class CashPlugin {
 
-    private final Logger logger;
-    private final Injector injector;
-    private final Settings config;
-    private final CommandManager commandManager;
+    private static CashPlugin instance;
 
     @Inject
-    private EventManager eventManager;
-
-    @Inject
-    private PluginManager pluginManager;
+    private Logger logger;
 
     private CashDatabase database;
 
-    @Inject
-    CashPlugin(Logger logger, Injector injector, Settings settings, CommandManager commandManager) {
-        this.logger = logger;
-        this.config = settings;
-
-        this.injector = injector;
-        this.commandManager = commandManager;
-    }
-
-    @Listener
-    public void onPreInitialization(GamePreInitializationEvent event) {
-        init();
-    }
-
     @Listener
     public void onInit(GameInitializationEvent event) {
-        commandManager.register(this, CommandSpec.builder()
-                .child(injector.getInstance(CashCommand.class).buildSpec(config), "ver", "see")
-                .child(injector.getInstance(DefineCashCommand.class).buildSpec(config), "definir", "define")
-                .child(injector.getInstance(AddCashCommand.class).buildSpec(config), "adicionar", "add")
-                .build(), "cashplugin", "cash");
+        instance = this;
 
-        eventManager.registerListeners(this, injector.getInstance(PlayerQuitListener.class));
+        GeneralConfig.loadConfig();
+        LangConfig.loadConfig();
     }
 
     @Listener
     public void onServerStart(GameStartedServerEvent event) {
-        logger.info("Plugin de Cash ligado!");
+        try {
+            database = new CashDatabase(logger);
+            database.createTable(this);
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
 
+        Sponge.getEventManager().registerListeners(this, new PlayerQuitListener(this));
+
+        CommandSpec addCommand = CommandSpec.builder()
+                .permission("cash.admin")
+                .arguments(
+                        GenericArguments.string(Text.of("nome")),
+                        GenericArguments.integer(Text.of("quantia"))
+                )
+                .executor(new CashAddCommand())
+                .build();
+
+        CommandSpec seeCommand = CommandSpec.builder()
+                .arguments(
+                        GenericArguments.optional(GenericArguments.string(Text.of("name")))
+                )
+                .executor(new CashSeeCommand())
+                .build();
+
+        CommandSpec main = CommandSpec.builder()
+                .child(addCommand, "adicionar", "add")
+                .child(seeCommand, "ver", "see")
+                .build();
+
+        Sponge.getCommandManager().register(
+                this,
+                main,
+                "cash"
+        );
+
+        logger.info("Plugin de Cash ligado!");
     }
 
     @Listener
     public void onDisable(GameStoppingServerEvent stoppingEvent) {
         if (database != null) {
             database.close();
-        }
-    }
-
-    private void init() {
-        config.load();
-        try {
-            database = new CashDatabase(logger, config);
-            database.createTable(this, config);
-        } catch (SQLException | UncheckedExecutionException | IOException ex) {
-            logger.error("Cannot connect to cash storage", ex);
-            Task.builder().execute(() -> Sponge.getServer().shutdown()).submit(this);
         }
     }
 
@@ -99,7 +94,7 @@ public class CashPlugin {
         return logger;
     }
 
-    public Settings getConfigManager() {
-        return config;
+    public static CashPlugin getInstance() {
+        return instance;
     }
 }

@@ -1,85 +1,68 @@
 package br.com.yiatzz.cash.storage;
 
 import br.com.yiatzz.cash.CashPlugin;
-import br.com.yiatzz.cash.config.Settings;
-import br.com.yiatzz.cash.config.node.SQLConfig;
-import me.lucko.helper.promise.Promise;
 import org.slf4j.Logger;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.charset.StandardCharsets;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 
 public class CashDatabase extends Database {
 
-    public CashDatabase(Logger logger, Settings settings) throws SQLException {
-        super(logger, settings, "cash_users");
+    public CashDatabase(Logger logger) throws SQLException {
+        super(logger, "cash_users");
     }
 
     @Override
-    public void createTable(CashPlugin plugin, Settings type) throws SQLException, IOException {
-        StringBuilder builder = new StringBuilder();
+    public void createTable(CashPlugin plugin) throws SQLException {
+        String sql = "CREATE TABLE IF NOT EXISTS `cash_users` (`UserName` VARCHAR(16) NOT NULL PRIMARY KEY, `Cash` DOUBLE NOT NULL DEFAULT 0);";
 
-        try (InputStream resourceStream = getClass().getResourceAsStream("/create.sql");
-             BufferedReader reader = new BufferedReader(new InputStreamReader(resourceStream, StandardCharsets.UTF_8));
-             Connection con = dataSource.getConnection(); Statement stmt = con.createStatement()) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line.replace("{TABLE_NAME}", tableName));
-                if (line.endsWith(";")) {
-                    String sql = builder.toString();
-                    if (type.getGeneral().getSQL().getType() == SQLConfig.StorageType.SQLITE) {
-                        sql = sql.replace("AUTO_INCREMENT", "AUTOINCREMENT");
-                    }
+        try (Connection connection = dataSource.getConnection()) {
 
-                    stmt.addBatch(sql);
-                    builder = new StringBuilder();
-                }
-            }
-
-            stmt.executeBatch();
+            PreparedStatement preparedStatement = connection.prepareStatement(sql);
+            preparedStatement.execute();
+            preparedStatement.close();
         }
     }
 
-    public Promise<Double> requestCash(String userName) {
+    public double requestCash(String userName) {
         Double localCash = cache.get(userName);
         if (localCash != null) {
-            return Promise.completed(localCash);
+            return localCash;
         }
 
-        Promise<Double> promise = Promise.start()
-                .thenApplyAsync(cash -> fetchCash(userName));
-
-        promise.thenAcceptSync(cash -> addCache(userName, cash));
-
-        return promise;
+        return fetchCash(userName);
     }
 
-    public Promise<Void> updateCash(String userName, Double cash) {
-        return Promise.start()
-                .thenApplyAsync($ -> {
-                    updateCashRaw(userName, cash);
-                    return null;
-                })
-                .thenAcceptSync($ -> cache.put(userName, cash));
-    }
-
-    private void updateCashRaw(String name, double cash) {
+    public void updateCash(String name, double cash) {
         try (Connection connection = dataSource.getConnection();
-             PreparedStatement preparedStatement = connection.prepareStatement("UPDATE `cash_users` SET `Cash` = ? WHERE `UserName` = ? LIMIT 1;")) {
+             PreparedStatement preparedStatement = connection.prepareStatement(
+                     "INSERT INTO `cash_users` (`UserName`, `Cash`) VALUES (?,?) ON DUPLICATE KEY UPDATE `Cash`=VALUES(Cash);"
+             )) {
 
-            preparedStatement.setDouble(1, cash);
-            preparedStatement.setString(2, name);
+            preparedStatement.setDouble(2, cash);
+            preparedStatement.setString(1, name);
+
+            preparedStatement.executeUpdate();
         } catch (SQLException exception) {
             exception.printStackTrace();
         }
     }
 
+    public void deleteUser(String name) {
+        try (Connection connection = dataSource.getConnection();
+             PreparedStatement preparedStatement = connection.prepareStatement("DELETE FROM `cash_users` WHERE `UserName` = ? LIMIT 1")) {
 
-    private Double fetchCash(String userName) {
+            preparedStatement.setString(1, name);
+
+            preparedStatement.executeUpdate();
+        } catch (SQLException exception) {
+            exception.printStackTrace();
+        }
+    }
+
+    private double fetchCash(String userName) {
         try (Connection connection = dataSource.getConnection();
              PreparedStatement preparedStatement = connection.prepareStatement("SELECT `Cash` FROM `cash_users` WHERE `UserName` = ? LIMIT 1;")) {
 
@@ -95,7 +78,7 @@ public class CashDatabase extends Database {
             exception.printStackTrace();
         }
 
-        return null;
+        return 0.0;
     }
 
     @Override
