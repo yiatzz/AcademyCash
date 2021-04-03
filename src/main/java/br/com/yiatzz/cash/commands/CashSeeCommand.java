@@ -1,7 +1,7 @@
 package br.com.yiatzz.cash.commands;
 
 import br.com.yiatzz.cash.CashPlugin;
-import br.com.yiatzz.cash.config.LangConfig;
+import br.com.yiatzz.cash.config.GeneralConfig;
 import br.com.yiatzz.cash.tasks.ShowPlayerCashTask;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandException;
@@ -29,7 +29,7 @@ public class CashSeeCommand implements CommandExecutor {
         if (name.isPresent()) {
             Optional<Player> player = Sponge.getServer().getPlayer(name.get());
             if (!player.isPresent()) {
-                src.sendMessage(Text.of(LangConfig.config.invalidUser));
+                src.sendMessage(Text.of(GeneralConfig.langConfig.invalidUser));
                 return CommandResult.success();
             }
 

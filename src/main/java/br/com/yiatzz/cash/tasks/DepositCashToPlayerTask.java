@@ -1,7 +1,7 @@
 package br.com.yiatzz.cash.tasks;
 
 import br.com.yiatzz.cash.CashPlugin;
-import br.com.yiatzz.cash.config.LangConfig;
+import br.com.yiatzz.cash.config.GeneralConfig;
 import br.com.yiatzz.cash.misc.utils.NumberUtils;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.text.Text;
@@ -28,7 +28,7 @@ public class DepositCashToPlayerTask implements Runnable {
 
         plugin.getDatabase().updateCash(userName, cash);
 
-        String addCash = LangConfig.config.addCash
+        String addCash = GeneralConfig.langConfig.addCash
                 .replace("{cash}", NumberUtils.format(cash))
                 .replace("{name}", userName);
 
