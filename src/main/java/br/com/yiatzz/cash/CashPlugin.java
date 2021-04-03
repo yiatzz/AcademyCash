@@ -3,7 +3,6 @@ package br.com.yiatzz.cash;
 import br.com.yiatzz.cash.commands.CashAddCommand;
 import br.com.yiatzz.cash.commands.CashSeeCommand;
 import br.com.yiatzz.cash.config.GeneralConfig;
-import br.com.yiatzz.cash.config.LangConfig;
 import br.com.yiatzz.cash.listeners.PlayerQuitListener;
 import br.com.yiatzz.cash.storage.CashDatabase;
 import com.google.inject.Inject;
@@ -12,6 +11,7 @@ import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.spec.CommandSpec;
 import org.spongepowered.api.event.Listener;
+import org.spongepowered.api.event.game.GameReloadEvent;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppingServerEvent;
@@ -35,7 +35,6 @@ public class CashPlugin {
         instance = this;
 
         GeneralConfig.loadConfig();
-        LangConfig.loadConfig();
     }
 
     @Listener
@@ -84,6 +83,11 @@ public class CashPlugin {
         if (database != null) {
             database.close();
         }
+    }
+
+    @Listener
+    public void onReload(GameReloadEvent reloadEvent) {
+        GeneralConfig.reloadConfig();
     }
 
     public CashDatabase getDatabase() {

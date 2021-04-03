@@ -1,7 +1,5 @@
 package br.com.yiatzz.cash.config.objects;
 
-import com.focamacho.sealconfig.relocated.blue.endless.jankson.Comment;
-
 public class LangObject {
 
     public String invalidUser = "&cUsuário inválido.";

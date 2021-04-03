@@ -1,7 +1,7 @@
 package br.com.yiatzz.cash.commands;
 
 import br.com.yiatzz.cash.CashPlugin;
-import br.com.yiatzz.cash.config.LangConfig;
+import br.com.yiatzz.cash.config.GeneralConfig;
 import br.com.yiatzz.cash.tasks.DepositCashToPlayerTask;
 import org.spongepowered.api.command.CommandException;
 import org.spongepowered.api.command.CommandResult;
@@ -16,22 +16,18 @@ public class CashAddCommand implements CommandExecutor {
 
     @Override
     public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
-        System.out.println(1);
-
         String name = args.<String>getOne(Text.of("nome")).get();
         double amountRaw = args.<Integer>getOne("quantia").get();
 
         if (amountRaw <= 0.0) {
             System.out.println(2);
-            src.sendMessage(Text.of(TextColors.RED, LangConfig.config.invalidAmount));
+            src.sendMessage(Text.of(TextColors.RED, GeneralConfig.langConfig.invalidAmount));
             return CommandResult.success();
         }
 
-        System.out.println(2);
-
         Task.builder()
                 .async()
-                .execute(() -> new DepositCashToPlayerTask(name, amountRaw, src, CashPlugin.getInstance()))
+                .execute(() -> new DepositCashToPlayerTask(name, amountRaw, src, CashPlugin.getInstance()).run())
                 .submit(CashPlugin.getInstance());
 
         return CommandResult.success();

@@ -1,7 +1,7 @@
 package br.com.yiatzz.cash.tasks;
 
 import br.com.yiatzz.cash.CashPlugin;
-import br.com.yiatzz.cash.config.LangConfig;
+import br.com.yiatzz.cash.config.GeneralConfig;
 import br.com.yiatzz.cash.misc.utils.NumberUtils;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.text.Text;
@@ -39,9 +39,9 @@ public class ShowPlayerCashTask implements Runnable {
         Text text;
 
         if (self) {
-            text = Text.of(LangConfig.config.seeCash.replaceAll("\\{cash\\}", NumberUtils.format(cash)));
+            text = Text.of(GeneralConfig.langConfig.seeCash.replaceAll("\\{cash\\}", NumberUtils.format(cash)));
         } else {
-            text = Text.of(LangConfig.config.seeOtherCash
+            text = Text.of(GeneralConfig.langConfig.seeOtherCash
                     .replaceAll("\\{name\\}", playerName)
                     .replaceAll("\\{cash\\}", NumberUtils.format(cash)));
         }
